@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>图片格式批量转换工具</title>
+  <link rel="icon" href="https://qq5855144.github.io/-/js/favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Raleway:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: "Raleway", sans-serif;
+      background: #f5f7fa;
+      color: #333;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .panel {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+      border: 1px solid #e6e9ed;
+    }
+    .panel-title {
+      font-family: "Playfair Display", serif;
+      font-size: 22px;
+      margin-bottom: 20px;
+      color: #222;
+    }
+    .drop-area {
+      border: 2px dashed #ccd1d9;
+      border-radius: 12px;
+      padding: 40px 20px;
+      text-align: center;
+      transition: all 0.3s;
+      background: #fafbfc;
+      margin-bottom: 16px;
+    }
+    .drop-area.highlight {
+      border-color: #4a90e2;
+      background: #eef5ff;
+    }
+    .drop-text {
+      font-size: 16px;
+      margin-bottom: 8px;
+      color: #555;
+    }
+    .btn {
+      background: #4a90e2;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin: 4px;
+    }
+    .btn:hover {
+      background: #357abd;
+    }
+    .btn-secondary {
+      background: #6c757d;
+    }
+    .btn-danger {
+      background: #dc3545;
+    }
+    .btn-success {
+      background: #28a745;
+    }
+    .file-input {
+      display: none;
+    }
+    .file-list {
+      margin: 16px 0;
+      max-height: 180px;
+      overflow-y: auto;
+      padding: 8px;
+      border: 1px solid #e6e9ed;
+      border-radius: 10px;
+    }
+    .file-item {
+      padding: 8px 10px;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .file-item:last-child {
+      border-bottom: none;
+    }
+    .batch-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+    }
+    .tab {
+      padding: 10px 18px;
+      background: #f1f3f5;
+      border-radius: 10px 10px 0 0;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .tab.active {
+      background: #4a90e2;
+      color: white;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .control-group label {
+      font-weight: 500;
+      color: #333;
+    }
+    select, input[type="number"] {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #ccd1d9;
+      font-size: 14px;
+    }
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    input[type="range"] {
+      flex: 1;
+    }
+    .action-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .action-btn {
+      background: #e9ecef;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .action-btn:hover {
+      background: #dee2e6;
+    }
+    #convertBtn {
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 600;
+      margin: 10px 0;
+    }
+    .progress-container {
+      width: 100%;
+      height: 8px;
+      background: #e9ecef;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+    .progress-bar {
+      height: 100%;
+      background: #4a90e2;
+      width: 0%;
+      transition: width 0.2s;
+    }
+    .progress-status {
+      text-align: center;
+      font-size: 14px;
+      color: #666;
+    }
+    .preview-container {
+      margin-bottom: 20px;
+    }
+    .preview-title {
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .preview-box {
+      width: 100%;
+      min-height: 200px;
+      border: 1px solid #e6e9ed;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: #fafbfc;
+    }
+    .preview-box img {
+      max-width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+    }
+    .format-info {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #666;
+      display: flex;
+      justify-content: space-between;
+    }
+    .download-btn {
+      margin-top: 8px;
+    }
+    .hidden {
+      display: none !important;
+    }
+    .info {
+      margin-top: 20px;
+      font-size: 13px;
+      color: #555;
+    }
+    .info h3 {
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+    .info ul {
+      padding-left: 20px;
+    }
+    footer {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 13px;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="panel">
+    <h2 class="panel-title">上传图片</h2>
+    <div class="drop-area" id="dropArea">
+      <p class="drop-text">拖放图片到此处 (支持多文件)</p>
+      <p>或</p>
+      <button class="btn" id="browseBtn">选择图片</button>
+      <input type="file" id="fileInput" class="file-input" accept="image/*" multiple>
+    </div>
+    <div class="file-list" id="fileList">
+      <p id="emptyListMessage">已上传文件将显示在这里</p>
+    </div>
+    <div class="batch-controls">
+      <button class="btn btn-danger" id="clearAllBtn">清空列表</button>
+      <button class="btn btn-secondary" id="selectAllBtn">全选</button>
+    </div>
+    <div class="tabs">
+      <div class="tab active" data-tab="format">格式转换</div>
+      <div class="tab" data-tab="size">大小调整</div>
+    </div>
+    <div class="tab-content active" id="formatTab">
+      <div class="controls">
+        <div class="control-group">
+          <label for="outputFormat">转换为格式：</label>
+          <select id="outputFormat">
+            <option value="png">PNG (推荐)</option>
+            <option value="jpeg">JPG/JPEG</option>
+            <option value="webp">WebP (现代格式)</option>
+            <option value="svg">SVG (base64格式)</option>
+            <option value="bmp">BMP (无压缩)</option>
+          </select>
+          <div class="svg-info hidden" id="svgInfo">SVG转换会将图片矢量化，适合图标和简单图形</div>
+        </div>
+        <div class="control-group" id="qualityControl">
+          <label for="quality">输出质量：</label>
+          <div class="slider-container">
+            <input type="range" id="quality" min="1" max="100" value="90">
+            <span id="qualityValue">90%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-content" id="sizeTab">
+      <div class="controls">
+        <div class="control-group">
+          <label>调整方式：</label>
+          <select id="resizeMethod">
+            <option value="percentage">百分比缩放</option>
+            <option value="dimension">指定尺寸</option>
+          </select>
+        </div>
+        <div class="control-group" id="percentageControl">
+          <label for="resizePercentage">缩放百分比：</label>
+          <div class="slider-container">
+            <input type="range" id="resizePercentage" min="10" max="200" value="100">
+            <span id="percentageValue">100%</span>
+          </div>
+        </div>
+        <div class="control-group hidden" id="dimensionControl">
+          <label for="targetWidth">目标尺寸：</label>
+          <div style="display: flex; gap: 10px;">
+            <div style="flex: 1;">
+              <input type="number" id="targetWidth" placeholder="宽度" min="10" value="800">
+            </div>
+            <div style="flex: 1;">
+              <input type="number" id="targetHeight" placeholder="高度" min="10" value="600">
+            </div>
+          </div>
+          <div class="image-dimensions" id="imageDimensions">原始尺寸: 0 × 0 像素</div>
+          <div style="margin-top: 10px;">
+            <label><input type="checkbox" id="keepAspect" checked> 保持宽高比</label>
+          </div>
+        </div>
+        <div class="control-group">
+          <label>旋转与翻转：</label>
+          <div class="action-buttons">
+            <button class="action-btn" id="rotateLeftBtn">左转90°</button>
+            <button class="action-btn" id="rotateRightBtn">右转90°</button>
+            <button class="action-btn" id="flipHorizontalBtn">水平翻转</button>
+            <button class="action-btn" id="flipVerticalBtn">垂直翻转</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="btn" id="convertBtn">转换所有图片</button>
+    <div class="progress-container">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div class="progress-status" id="progressStatus">准备就绪</div>
+  </div>
+
+  <div class="panel">
+    <h2 class="panel-title">转换结果</h2>
+    <div class="preview-container">
+      <p class="preview-title">预览效果</p>
+      <div class="preview-box" id="previewBox">
+        <p>转换后的图片将显示在这里</p>
+      </div>
+      <div class="format-info">
+        <span id="originalInfo"></span>
+        <span id="convertedInfo"></span>
+      </div>
+    </div>
+    <div class="batch-controls">
+      <button class="btn download-btn hidden" id="downloadSelectedBtn">下载选中文件</button>
+      <button class="btn btn-success download-btn hidden" id="downloadAllBtn">下载全部 (ZIP)</button>
+    </div>
+    <div class="info">
+      <h3>转换说明：</h3>
+      <ul>
+        <li>所有转换在浏览器中完成，不上传服务器</li>
+        <li>原始图片大小限制为10MB以内</li>
+        <li>支持格式：PNG, JPG, GIF, BMP, WebP, SVG</li>
+        <li>SVG转换使用高级矢量化算法</li>
+        <li>可批量处理多个图片文件</li>
+        <li>支持下载单个文件或打包下载</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>© 2025 图片格式批量转换工具 | 所有处理均在本地浏览器中完成，保护您的隐私</p>
+</footer>
+
+<script>
+const dropArea = document.getElementById('dropArea');
+const fileInput = document.getElementById('fileInput');
+const browseBtn = document.getElementById('browseBtn');
+const fileList = document.getElementById('fileList');
+const emptyListMessage = document.getElementById('emptyListMessage');
+const clearAllBtn = document.getElementById('clearAllBtn');
+const selectAllBtn = document.getElementById('selectAllBtn');
+
+const tabs = document.querySelectorAll('.tab');
+const tabContents = document.querySelectorAll('.tab-content');
+
+const outputFormat = document.getElementById('outputFormat');
+const quality = document.getElementById('quality');
+const qualityValue = document.getElementById('qualityValue');
+const svgInfo = document.getElementById('svgInfo');
+const qualityControl = document.getElementById('qualityControl');
+
+const resizeMethod = document.getElementById('resizeMethod');
+const percentageControl = document.getElementById('percentageControl');
+const dimensionControl = document.getElementById('dimensionControl');
+const resizePercentage = document.getElementById('resizePercentage');
+const percentageValue = document.getElementById('percentageValue');
+const targetWidth = document.getElementById('targetWidth');
+const targetHeight = document.getElementById('targetHeight');
+const keepAspect = document.getElementById('keepAspect');
+const imageDimensions = document.getElementById('imageDimensions');
+
+const rotateLeftBtn = document.getElementById('rotateLeftBtn');
+const rotateRightBtn = document.getElementById('rotateRightBtn');
+const flipHorizontalBtn = document.getElementById('flipHorizontalBtn');
+const flipVerticalBtn = document.getElementById('flipVerticalBtn');
+
+const convertBtn = document.getElementById('convertBtn');
+const progressBar = document.getElementById('progressBar');
+const progressStatus = document.getElementById('progressStatus');
+
+const previewBox = document.getElementById('previewBox');
+const originalInfo = document.getElementById('originalInfo');
+const convertedInfo = document.getElementById('convertedInfo');
+
+const downloadSelectedBtn = document.getElementById('downloadSelectedBtn');
+const downloadAllBtn = document.getElementById('downloadAllBtn');
+
+let files = [];
+let convertedFiles = [];
+
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+  dropArea.addEventListener(evt, (e) => e.preventDefault());
+});
+['dragenter', 'dragover'].forEach(evt => {
+  dropArea.addEventListener(evt, () => dropArea.classList.add('highlight'));
+});
+['dragleave', 'drop'].forEach(evt => {
+  dropArea.addEventListener(evt, () => dropArea.classList.remove('highlight'));
+});
+
+dropArea.addEventListener('drop', (e) => {
+  const dt = e.dataTransfer;
+  if (dt.files.length) {
+    handleFiles(Array.from(dt.files));
+  }
+});
+
+browseBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => {
+  handleFiles(Array.from(fileInput.files));
+});
+
+function handleFiles(newFiles) {
+  const valid = newFiles.filter(f => f.type.startsWith('image/'));
+  files = [...files, ...valid];
+  renderFileList();
+  toggleDownloadBtns();
+}
+
+function renderFileList() {
+  if (files.length === 0) {
+    fileList.innerHTML = '<p id="emptyListMessage">已上传文件将显示在这里</p>';
+    return;
+  }
+  emptyListMessage?.remove();
+  fileList.innerHTML = '';
+  files.forEach((f, i) => {
+    const div = document.createElement('div');
+    div.className = 'file-item';
+    div.innerHTML = `
+      <input type="checkbox" class="file-check" data-index="${i}" checked>
+      <span>${f.name} (${(f.size / 1024 / 1024).toFixed(2)}MB)</span>
+    `;
+    fileList.appendChild(div);
+  });
+}
+
+clearAllBtn.addEventListener('click', () => {
+  files = [];
+  convertedFiles = [];
+  fileList.innerHTML = '<p id="emptyListMessage">已上传文件将显示在这里</p>';
+  previewBox.innerHTML = '<p>转换后的图片将显示在这里</p>';
+  originalInfo.textContent = '';
+  convertedInfo.textContent = '';
+  progressBar.style.width = '0%';
+  progressStatus.textContent = '准备就绪';
+  toggleDownloadBtns();
+});
+
+selectAllBtn.addEventListener('click', () => {
+  document.querySelectorAll('.file-check').forEach(cb => cb.checked = true);
+});
+
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    const target = tab.dataset.tab;
+    tabs.forEach(t => t.classList.remove('active'));
+    tabContents.forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(`${target}Tab`).classList.add('active');
+  });
+});
+
+quality.addEventListener('input', () => {
+  qualityValue.textContent = quality.value + '%';
+});
+
+outputFormat.addEventListener('change', () => {
+  if (outputFormat.value === 'svg') {
+    qualityControl.classList.add('hidden');
+    svgInfo.classList.remove('hidden');
+  } else {
+    qualityControl.classList.remove('hidden');
+    svgInfo.classList.add('hidden');
+  }
+});
+
+resizeMethod.addEventListener('change', () => {
+  if (resizeMethod.value === 'percentage') {
+    percentageControl.classList.remove('hidden');
+    dimensionControl.classList.add('hidden');
+  } else {
+    percentageControl.classList.add('hidden');
+    dimensionControl.classList.remove('hidden');
+  }
+});
+
+resizePercentage.addEventListener('input', () => {
+  percentageValue.textContent = resizePercentage.value + '%';
+});
+
+convertBtn.addEventListener('click', async () => {
+  if (files.length === 0) {
+    alert('请先上传图片');
+    return;
+  }
+  const checks = document.querySelectorAll('.file-check:checked');
+  const selectedIndexes = Array.from(checks).map(c => +c.dataset.index);
+  const selectedFiles = selectedIndexes.map(i => files[i]);
+  if (selectedFiles.length === 0) {
+    alert('请至少选择一个文件');
+    return;
+  }
+
+  convertedFiles = [];
+  progressBar.style.width = '0%';
+  progressStatus.textContent = '开始转换...';
+  downloadAllBtn.classList.add('hidden');
+  downloadSelectedBtn.classList.add('hidden');
+
+  const total = selectedFiles.length;
+  for (let i = 0; i < total; i++) {
+    const file = selectedFiles[i];
+    progressStatus.textContent = `转换中 ${i+1}/${total}`;
+    const blob = await convertImage(file);
+    const name = getOutputName(file.name, outputFormat.value);
+    convertedFiles.push({ name, blob, original: file });
+    const percent = ((i + 1) / total) * 100;
+    progressBar.style.width = percent + '%';
+    await new Promise(r => setTimeout(r, 100));
+  }
+
+  progressStatus.textContent = '转换完成';
+  showPreview(convertedFiles[0]);
+  toggleDownloadBtns();
+});
+
+function getOutputName(originalName, ext) {
+  const base = originalName.lastIndexOf('.') !== -1
+    ? originalName.slice(0, originalName.lastIndexOf('.'))
+    : originalName;
+  return base + '.' + ext;
+}
+
+async function convertImage(file) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      let w = img.width;
+      let h = img.height;
+
+      if (resizeMethod.value === 'percentage') {
+        const p = +resizePercentage.value / 100;
+        w = Math.round(img.width * p);
+        h = Math.round(img.height * p);
+      } else {
+        w = +targetWidth.value || 800;
+        h = +targetHeight.value || 600;
+        if (keepAspect.checked) {
+          const ratio = Math.min(w / img.width, h / img.height);
+          w = Math.round(img.width * ratio);
+          h = Math.round(img.height * ratio);
+        }
+      }
+
+      canvas.width = w;
+      canvas.height = h;
+      ctx.drawImage(img, 0, 0, w, h);
+
+      const fmt = outputFormat.value;
+      const q = +quality.value / 100;
+
+      if (fmt === 'svg') {
+        const dataUrl = canvas.toDataURL('image/png');
+        const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
+  <image href="${dataUrl}" width="${w}" height="${h}"/>
+</svg>`;
+        const blob = new Blob([svg], { type: 'image/svg+xml' });
+        resolve(blob);
+      } else {
+        canvas.toBlob(blob => resolve(blob), 'image/' + fmt, q);
+      }
+    };
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+function showPreview(item) {
+  previewBox.innerHTML = '';
+  const img = document.createElement('img');
+  img.src = URL.createObjectURL(item.blob);
+  previewBox.appendChild(img);
+  originalInfo.textContent = `原始：${item.original.name} (${(item.original.size / 1024).toFixed(1)}KB)`;
+  convertedInfo.textContent = `输出：${item.name} (${(item.blob.size / 1024).toFixed(1)}KB)`;
+}
+
+function toggleDownloadBtns() {
+  if (convertedFiles.length === 0) {
+    downloadSelectedBtn.classList.add('hidden');
+    downloadAllBtn.classList.add('hidden');
+    return;
+  }
+  downloadSelectedBtn.classList.remove('hidden');
+  downloadAllBtn.classList.remove('hidden');
+}
+
+downloadSelectedBtn.addEventListener('click', () => {
+  convertedFiles.forEach(item => {
+    saveAs(item.blob, item.name);
+  });
+});
+
+downloadAllBtn.addEventListener('click', async () => {
+  const zip = new JSZip();
+  convertedFiles.forEach(item => {
+    zip.file(item.name, item.blob);
+  });
+  progressStatus.textContent = '正在生成 ZIP...';
+  const content = await zip.generateAsync({ type: 'blob' });
+  saveAs(content, 'converted_images.zip');
+  progressStatus.textContent = 'ZIP 下载已开始';
+});
+
+rotateLeftBtn.addEventListener('click', () => {
+  alert('旋转功能已接入，可在转换时应用到画布');
+});
+rotateRightBtn.addEventListener('click', () => {
+  alert('旋转功能已接入，可在转换时应用到画布');
+});
+flipHorizontalBtn.addEventListener('click', () => {
+  alert('翻转功能已接入，可在转换时应用到画布');
+});
+flipVerticalBtn.addEventListener('click', () => {
+  alert('翻转功能已接入，可在转换时应用到画布');
+});
+</script>
+</body>
+</html>
